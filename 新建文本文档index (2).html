@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>睡眠音乐</title>
+    <!-- 使用 Tailwind CSS 加速样式开发 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            /* 柔和的浅粉色系渐变 */
+            background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+            background-attachment: fixed;
+        }
+        
+        /* 自定义滑块样式 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #f472b6;
+            border-radius: 5px;
+            outline: none;
+            transition: background 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #ec4899;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(236, 72, 153, 0.5);
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #db2777;
+            transform: scale(1.1);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #ec4899;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(236, 72, 153, 0.5);
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .mood-icon {
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            filter: grayscale(100%);
+        }
+
+        .mood-icon.selected {
+            transform: scale(1.2);
+            filter: grayscale(0%);
+        }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white bg-opacity-70 p-8 rounded-3xl shadow-2xl max-w-xl w-full text-center border border-pink-200 backdrop-blur-sm relative">
+        <h1 class="text-4xl font-extrabold mb-2 text-pink-700">助眠音乐</h1>
+        <p class="text-pink-500 mb-6">选择一首歌曲，让身心放松</p>
+        
+        <!-- 音乐分类标签 -->
+        <div class="flex justify-center space-x-3 mb-6">
+            <button class="category-btn p-2 rounded-full text-sm font-medium transition-colors duration-200" data-category="all">全部</button>
+            <button class="category-btn p-2 rounded-full text-sm font-medium transition-colors duration-200" data-category="piano">轻柔钢琴</button>
+            <button class="category-btn p-2 rounded-full text-sm font-medium transition-colors duration-200" data-category="nature">自然音效</button>
+        </div>
+
+        <!-- 歌曲列表容器 -->
+        <div id="musicList" class="space-y-3 mb-8 max-h-60 overflow-y-auto pr-2">
+            <!-- 歌曲项将在这里动态生成 -->
+        </div>
+
+        <!-- 播放器控制面板 -->
+        <div id="playerControls" class="flex flex-col items-center p-4 bg-pink-100 bg-opacity-50 rounded-2xl shadow-inner">
+            <div id="songTitle" class="text-xl font-semibold mb-2 text-pink-800 truncate w-full">未选择歌曲</div>
+            <div id="progressBar" class="w-full h-2 bg-pink-200 rounded-full mb-4 cursor-pointer">
+                <div id="progressFill" class="h-2 bg-gradient-to-r from-pink-400 to-pink-600 rounded-full transition-all duration-100 ease-linear" style="width: 0%;"></div>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <!-- 上一首按钮 -->
+                <button id="prevButton" class="text-pink-500 hover:text-pink-700 transition-colors duration-200 focus:outline-none transform hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                    </svg>
+                </button>
+                <!-- 播放/暂停按钮 -->
+                <button id="playPauseButton" class="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 transition-all duration-300 text-white font-bold p-4 rounded-full shadow-lg transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-pink-500 focus:ring-opacity-50">
+                    <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg id="pauseIcon" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 hidden" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                </button>
+                <!-- 下一首按钮 -->
+                <button id="nextButton" class="text-pink-500 hover:text-pink-700 transition-colors duration-200 focus:outline-none transform hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 6l-8.5 6 8.5 6zM6 6h2v12H6z"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- 音量控制 -->
+            <div class="mt-6 w-full flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-pink-500" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+            </div>
+        </div>
+
+        <!-- 睡眠日记按钮 -->
+        <button id="journalButton" class="w-full mt-6 py-3 px-6 rounded-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50">
+            记录我的睡眠
+        </button>
+    </div>
+
+    <!-- 睡眠日记模态框 -->
+    <div id="journalModal" class="fixed inset-0 bg-pink-950 bg-opacity-75 flex items-center justify-center hidden p-4">
+        <div class="bg-pink-900 bg-opacity-80 p-6 rounded-3xl shadow-2xl max-w-sm w-full relative">
+            <button id="closeModalBtn" class="absolute top-4 right-4 text-pink-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h2 class="text-2xl font-bold mb-4 text-pink-400">记录睡眠</h2>
+            
+            <div class="flex justify-around mb-6">
+                <div class="flex flex-col items-center">
+                    <span class="mood-icon" data-mood="sad">😔</span>
+                    <span class="text-pink-300 text-xs mt-1">难过</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="mood-icon" data-mood="calm">😌</span>
+                    <span class="text-pink-300 text-xs mt-1">平静</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="mood-icon" data-mood="happy">😊</span>
+                    <span class="text-pink-300 text-xs mt-1">开心</span>
+                </div>
+            </div>
+
+            <p class="text-pink-300 text-sm mb-2">睡眠质量如何？</p>
+            <textarea id="sleepNote" class="w-full p-3 rounded-lg bg-pink-950 text-white border border-pink-800 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all" rows="3" placeholder="例如：睡得很好，但醒来了一次。"></textarea>
+
+            <button id="saveJournalBtn" class="w-full mt-4 py-3 rounded-full bg-pink-500 text-white font-bold hover:bg-pink-600 transition-colors duration-300">
+                保存记录
+            </button>
+        </div>
+    </div>
+
+    <!-- 睡眠日记列表模态框 -->
+    <div id="journalListModal" class="fixed inset-0 bg-pink-950 bg-opacity-75 flex items-center justify-center hidden p-4">
+        <div class="bg-pink-900 bg-opacity-80 p-6 rounded-3xl shadow-2xl max-w-md w-full relative">
+            <button id="closeListModalBtn" class="absolute top-4 right-4 text-pink-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h2 class="text-2xl font-bold mb-4 text-pink-400">我的睡眠日记</h2>
+            <div id="journalEntries" class="space-y-4 max-h-72 overflow-y-auto pr-2">
+                <!-- 日记条目将在这里显示 -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 定义音乐数据，现在使用真实的音频文件URL
+            const musicData = [
+                { title: "宁静海洋", category: "nature", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+                { title: "雨夜轻语", category: "nature", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+                { title: "深林微风", category: "nature", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+                { title: "星光漫步", category: "piano", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+                { title: "梦境涟漪", category: "piano", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
+                { title: "静谧小调", category: "piano", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
+                { title: "冥想之旅", category: "meditation", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" }
+            ];
+
+            // 模拟睡眠日记数据存储
+            let journalEntries = [];
+
+            // 获取 DOM 元素
+            const musicList = document.getElementById('musicList');
+            const playPauseButton = document.getElementById('playPauseButton');
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const songTitle = document.getElementById('songTitle');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            const journalButton = document.getElementById('journalButton');
+            const journalModal = document.getElementById('journalModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const moodIcons = document.querySelectorAll('.mood-icon');
+            const sleepNote = document.getElementById('sleepNote');
+            const saveJournalBtn = document.getElementById('saveJournalBtn');
+            const journalListModal = document.getElementById('journalListModal');
+            const closeListModalBtn = document.getElementById('closeListModalBtn');
+            const journalEntriesList = document.getElementById('journalEntries');
+
+            // 初始化音乐相关的变量
+            let currentMusicIndex = -1;
+            let isPlaying = false;
+            let audioPlayer = new Audio();
+            
+            // 渲染音乐列表
+            function renderMusicList(category = 'all') {
+                musicList.innerHTML = ''; // 清空列表
+                const filteredMusic = category === 'all' 
+                    ? musicData 
+                    : musicData.filter(song => song.category === category);
+                
+                if (filteredMusic.length === 0) {
+                    musicList.innerHTML = `<p class="text-pink-600 text-center py-8">该分类下暂无歌曲</p>`;
+                    return;
+                }
+
+                filteredMusic.forEach((song, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = song.title;
+                    button.className = "w-full text-lg font-medium p-4 rounded-xl bg-pink-100 hover:bg-pink-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 shadow-md text-pink-800";
+                    button.dataset.index = musicData.findIndex(s => s.title === song.title); // 获取原始索引
+                    musicList.appendChild(button);
+                });
+            }
+            
+            // 初始化时渲染所有歌曲
+            renderMusicList();
+            
+            // 默认选中“全部”类别按钮
+            document.querySelector('.category-btn[data-category="all"]').classList.add('bg-pink-600', 'text-white');
+            
+            // 更新播放按钮的状态
+            function updatePlayButton() {
+                if (isPlaying) {
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                } else {
+                    playIcon.classList.remove('hidden');
+                    pauseIcon.classList.add('hidden');
+                }
+            }
+
+            // 播放指定索引的歌曲
+            function playMusic(index) {
+                // 这是修复播放错误的关键部分。
+                // 1. 如果当前有歌曲正在播放，先暂停它。
+                if (!audioPlayer.paused) {
+                    audioPlayer.pause();
+                }
+
+                currentMusicIndex = index;
+                const song = musicData[currentMusicIndex];
+                
+                // 立即更新歌曲标题，告知用户新歌正在加载
+                songTitle.textContent = `${song.title} (正在加载...)`;
+                
+                // 移除所有按钮的选中状态
+                document.querySelectorAll('#musicList button').forEach(btn => {
+                    btn.classList.remove('bg-pink-600', 'ring-2', 'ring-pink-500');
+                    btn.classList.add('bg-pink-100');
+                });
+                
+                // 给当前歌曲按钮添加选中状态
+                const currentButton = document.querySelector(`[data-index='${index}']`);
+                if(currentButton) {
+                    currentButton.classList.add('bg-pink-600', 'ring-2', 'ring-pink-500');
+                    currentButton.classList.remove('bg-pink-100');
+                }
+                
+                // 设置新的音频源
+                audioPlayer.src = song.url;
+                
+                // 只有当新音频文件可以播放时才调用 play()，这解决了"play()被pause()打断"的错误
+                audioPlayer.addEventListener('canplaythrough', () => {
+                    audioPlayer.play().then(() => {
+                        isPlaying = true;
+                        updatePlayButton();
+                        songTitle.textContent = song.title; // 播放成功后移除加载状态
+                    }).catch(error => {
+                        console.error("播放失败:", error);
+                        isPlaying = false;
+                        updatePlayButton();
+                        songTitle.textContent = "播放失败";
+                    });
+                }, { once: true }); // 使用 { once: true } 确保事件只触发一次
+            }
+            
+            // 监听歌曲列表的点击事件
+            musicList.addEventListener('click', (event) => {
+                const button = event.target.closest('button');
+                if (button) {
+                    const index = parseInt(button.dataset.index);
+                    playMusic(index);
+                }
+            });
+
+            // 播放/暂停按钮事件
+            playPauseButton.addEventListener('click', () => {
+                if (audioPlayer.paused) {
+                    if (currentMusicIndex === -1) {
+                        playMusic(0);
+                    } else {
+                        // 修复: 只有当音频源已加载时才尝试播放
+                        if (audioPlayer.readyState >= 3) {
+                            audioPlayer.play().then(() => {
+                                isPlaying = true;
+                                updatePlayButton();
+                            }).catch(error => {
+                                console.error("播放失败:", error);
+                            });
+                        }
+                    }
+                } else {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    updatePlayButton();
+                }
+            });
+
+            // 上一首按钮事件
+            prevButton.addEventListener('click', () => {
+                let prevIndex;
+                if (currentMusicIndex === -1) {
+                    prevIndex = musicData.length - 1;
+                } else if (currentMusicIndex > 0) {
+                    prevIndex = currentMusicIndex - 1;
+                } else {
+                    // 循环到最后一首
+                    prevIndex = musicData.length - 1;
+                }
+                playMusic(prevIndex);
+            });
+
+            // 下一首按钮事件
+            nextButton.addEventListener('click', () => {
+                let nextIndex;
+                if (currentMusicIndex === -1) {
+                    nextIndex = 0;
+                } else if (currentMusicIndex < musicData.length - 1) {
+                    nextIndex = currentMusicIndex + 1;
+                } else {
+                    // 循环到第一首
+                    nextIndex = 0;
+                }
+                playMusic(nextIndex);
+            });
+
+            // 音量滑块事件
+            volumeSlider.addEventListener('input', (event) => {
+                audioPlayer.volume = event.target.value;
+            });
+            
+            // 播放进度更新
+            audioPlayer.addEventListener('timeupdate', () => {
+                if (!audioPlayer.paused && !isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
+                    const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                    progressFill.style.width = `${progress}%`;
+                }
+            });
+
+            // 当歌曲结束时自动播放下一首
+            audioPlayer.addEventListener('ended', () => {
+                nextButton.click();
+            });
+            
+            // 音乐分类按钮事件
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    categoryButtons.forEach(btn => btn.classList.remove('bg-pink-600', 'text-white'));
+                    button.classList.add('bg-pink-600', 'text-white');
+                    renderMusicList(button.dataset.category);
+                });
+            });
+
+            // 睡眠日记按钮事件
+            journalButton.addEventListener('click', () => {
+                journalModal.classList.remove('hidden');
+            });
+
+            // 关闭模态框事件
+            closeModalBtn.addEventListener('click', () => {
+                journalModal.classList.add('hidden');
+                // 重置表单
+                moodIcons.forEach(icon => icon.classList.remove('selected'));
+                sleepNote.value = '';
+            });
+
+            // 情绪图标点击事件
+            let selectedMood = null;
+            moodIcons.forEach(icon => {
+                icon.addEventListener('click', () => {
+                    moodIcons.forEach(i => i.classList.remove('selected'));
+                    icon.classList.add('selected');
+                    selectedMood = icon.dataset.mood;
+                });
+            });
+
+            // 保存日记事件
+            saveJournalBtn.addEventListener('click', () => {
+                // 不再使用 alert，而是用模态框提醒
+                if (!selectedMood) {
+                    // 模拟一个提示信息
+                    const messageBox = document.createElement('div');
+                    messageBox.className = "fixed top-10 left-1/2 -translate-x-1/2 p-4 rounded-xl bg-red-500 text-white font-bold transition-all duration-300 transform scale-0 opacity-0 z-50";
+                    messageBox.textContent = "请选择您的情绪";
+                    document.body.appendChild(messageBox);
+                    
+                    setTimeout(() => {
+                        messageBox.classList.remove('scale-0', 'opacity-0');
+                        messageBox.classList.add('scale-100', 'opacity-100');
+                    }, 10);
+
+                    setTimeout(() => {
+                        messageBox.classList.remove('scale-100', 'opacity-100');
+                        messageBox.classList.add('scale-0', 'opacity-0');
+                        setTimeout(() => messageBox.remove(), 300);
+                    }, 2000);
+
+                    return;
+                }
+                const note = sleepNote.value;
+                const date = new Date().toLocaleDateString('zh-CN');
+                journalEntries.push({ date, mood: selectedMood, note });
+                
+                // 模拟数据存储后，可以显示日记列表
+                renderJournalEntries();
+                journalModal.classList.add('hidden');
+                journalListModal.classList.remove('hidden');
+            });
+
+            // 渲染日记列表
+            function renderJournalEntries() {
+                journalEntriesList.innerHTML = '';
+                if (journalEntries.length === 0) {
+                    journalEntriesList.innerHTML = `<p class="text-pink-600 text-center py-8">暂无日记记录</p>`;
+                    return;
+                }
+                journalEntries.forEach(entry => {
+                    const moodEmoji = {
+                        sad: "😔",
+                        calm: "😌",
+                        happy: "😊"
+                    }[entry.mood];
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'p-4 rounded-xl bg-pink-100 shadow-lg border border-pink-200 text-left text-pink-800';
+                    entryDiv.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-lg font-bold">${moodEmoji}</span>
+                            <span class="text-xs text-pink-500">${entry.date}</span>
+                        </div>
+                        <p class="text-sm text-pink-600">${entry.note || '无备注'}</p>
+                    `;
+                    journalEntriesList.appendChild(entryDiv);
+                });
+            }
+
+            // 关闭日记列表模态框
+            closeListModalBtn.addEventListener('click', () => {
+                journalListModal.classList.add('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
